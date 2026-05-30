@@ -31,32 +31,27 @@ export default function Chat({ socket, currentUser }: ChatProps) {
     const [isNearBottom, setIsNearBottom] = useState(true);
 
     useEffect(() => {
-        socket.on('chat-history', (history: Message[]) => {
-            setMessages(history);
-        });
-
-        socket.on('chat-message', (message: Message) => {
-            setMessages(prev => [...prev, message]);
-        });
-
-        socket.on('user-typing', ({ user, isTyping }: { user: string; isTyping: boolean }) => {
+        const onHistory = (history: Message[]) => setMessages(history);
+        const onMessage = (message: Message) => setMessages(prev => [...prev, message]);
+        const onTyping = ({ user, isTyping }: { user: string; isTyping: boolean }) => {
             setTypingUsers(prev => {
                 const newSet = new Set(prev);
-                if (isTyping) {
-                    newSet.add(user);
-                } else {
-                    newSet.delete(user);
-                }
+                if (isTyping) newSet.add(user);
+                else newSet.delete(user);
                 return newSet;
             });
-        });
+        };
+
+        socket.on('chat-history', onHistory);
+        socket.on('chat-message', onMessage);
+        socket.on('user-typing', onTyping);
 
         socket.emit('request-chat-history');
 
         return () => {
-            socket.off('chat-history');
-            socket.off('chat-message');
-            socket.off('user-typing');
+            socket.off('chat-history', onHistory);
+            socket.off('chat-message', onMessage);
+            socket.off('user-typing', onTyping);
         };
     }, [socket]);
 

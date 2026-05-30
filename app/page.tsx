@@ -1,24 +1,24 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import Chat from './components/Chat';
 import Sidebar from './components/Sidebar';
 
-let socket: Socket;
-
 export default function Home() {
+  const socketRef = useRef<Socket | null>(null);
   const [connected, setConnected] = useState(false);
   const [socketReady, setSocketReady] = useState(false);
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    socket = io({
+    const socket = io({
       transports: ['websocket'],
       upgrade: false,
       reconnection: true,
     });
+    socketRef.current = socket;
 
     socket.on('connect', () => {
       console.log('Conectado al servidor');
@@ -33,10 +33,36 @@ export default function Home() {
     });
 
     return () => {
-      socket.off('connect');
-      socket.off('connect_error');
-      if (socket) socket.disconnect();
+      socket.disconnect();
+      socketRef.current = null;
     };
+  }, []);
+
+  const logout = useCallback(() => {
+    const socket = socketRef.current;
+    if (socket) {
+      socket.disconnect();
+      socketRef.current = null;
+    }
+    const newSocket = io({
+      transports: ['websocket'],
+      upgrade: false,
+      reconnection: true,
+    });
+    socketRef.current = newSocket;
+    newSocket.on('connect', () => {
+      setSocketReady(true);
+      setError('');
+    });
+    newSocket.on('connect_error', (connectError) => {
+      console.error('Error de conexion socket:', connectError.message);
+      setSocketReady(false);
+      setError('No se pudo conectar al servidor de chat.');
+    });
+    setConnected(false);
+    setUsername('');
+    setError('');
+    setSocketReady(false);
   }, []);
 
   const joinChat = (e: React.FormEvent) => {
@@ -47,7 +73,7 @@ export default function Home() {
     }
 
     if (username.trim()) {
-      socket.emit('user-join', username.trim());
+      socketRef.current!.emit('user-join', username.trim());
       setConnected(true);
       setError('');
     } else {
@@ -102,8 +128,8 @@ export default function Home() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar socket={socket} currentUser={username} />
-        <Chat socket={socket} currentUser={username} />
+        <Sidebar socket={socketRef.current!} currentUser={username} onLogout={logout} />
+        <Chat socket={socketRef.current!} currentUser={username} />
       </div>
     </div>
   );

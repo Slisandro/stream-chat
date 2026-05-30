@@ -13,28 +13,25 @@ interface User {
 interface SidebarProps {
     socket: Socket;
     currentUser: string;
+    onLogout: () => void;
 }
 
-export default function Sidebar({ socket, currentUser }: SidebarProps) {
+export default function Sidebar({ socket, currentUser, onLogout }: SidebarProps) {
     const [users, setUsers] = useState<User[]>([]);
 
     useEffect(() => {
-        socket.on('users-list', (usersList: User[]) => {
-            setUsers(usersList);
-        });
+        const onUsersList = (usersList: User[]) => setUsers(usersList);
+        const onUserJoined = (user: User) => console.log(`${user.name} se unió`);
+        const onUserLeft = (userName: string) => console.log(`${userName} salió`);
 
-        socket.on('user-joined', (user: User) => {
-            console.log(`${user.name} se unió`);
-        });
-
-        socket.on('user-left', (userName: string) => {
-            console.log(`${userName} salió`);
-        });
+        socket.on('users-list', onUsersList);
+        socket.on('user-joined', onUserJoined);
+        socket.on('user-left', onUserLeft);
 
         return () => {
-            socket.off('users-list');
-            socket.off('user-joined');
-            socket.off('user-left');
+            socket.off('users-list', onUsersList);
+            socket.off('user-joined', onUserJoined);
+            socket.off('user-left', onUserLeft);
         };
     }, [socket]);
 
@@ -77,6 +74,12 @@ export default function Sidebar({ socket, currentUser }: SidebarProps) {
                     </div>
                 ))}
             </div>
+            <button
+                onClick={onLogout}
+                className="m-3 mt-auto text-on-surface-variant hover:text-error text-body-sm border border-white/10 rounded-lg px-3 py-2 transition-colors"
+            >
+                Salir del chat
+            </button>
         </aside>
     );
 }
