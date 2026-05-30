@@ -113,10 +113,10 @@ app.prepare().then(() => {
     });
   });
 
-  const port = Number(process.env.PORT || 3000);
-
-  server.listen(port, (err) => {
+  const port = Number(process.env.PORT || 8080);
+  
+  server.listen(port, '0.0.0.0', (err) => {  
     if (err) throw err;
-    console.log(`> Servidor corriendo en http://localhost:${port}`);
+    console.log(`> Servidor corriendo en http://0.0.0.0:${port}`); 
   });
 });
