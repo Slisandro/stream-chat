@@ -14,7 +14,11 @@ export default function Home() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    socket = io();
+    socket = io({
+      transports: ['websocket'],
+      upgrade: false,
+      reconnection: true,
+    });
 
     socket.on('connect', () => {
       console.log('Conectado al servidor');
@@ -22,7 +26,8 @@ export default function Home() {
       setError('');
     });
 
-    socket.on('connect_error', () => {
+    socket.on('connect_error', (connectError) => {
+      console.error('Error de conexion socket:', connectError.message);
       setSocketReady(false);
       setError('No se pudo conectar al servidor de chat.');
     });

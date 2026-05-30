@@ -5,7 +5,7 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 
-const dev = false;
+const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
@@ -18,21 +18,36 @@ if (!fs.existsSync(dataDir)) {
 const dbPath = path.join(dataDir, 'chat.db');
 console.log(`🗄️ Base de datos: ${dbPath}`);
 
-const db = new sqlite3.Database(dbPath);
+const db = new sqlite3.Database(dbPath, (error) => {
+  if (error) {
+    console.error('Error abriendo SQLite:', error);
+  }
+});
 
-db.run(`
-  CREATE TABLE IF NOT EXISTS messages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_name TEXT NOT NULL,
-    user_color TEXT NOT NULL,
-    user_badges TEXT,
-    text TEXT NOT NULL,
-    timestamp INTEGER NOT NULL,
-    system INTEGER DEFAULT 0
-  )
-`);
+const initDatabase = () => new Promise((resolve, reject) => {
+  db.run(`
+    CREATE TABLE IF NOT EXISTS messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_name TEXT NOT NULL,
+      user_color TEXT NOT NULL,
+      user_badges TEXT,
+      text TEXT NOT NULL,
+      timestamp INTEGER NOT NULL,
+      system INTEGER DEFAULT 0
+    )
+  `, (error) => {
+    if (error) {
+      reject(error);
+      return;
+    }
+
+    resolve();
+  });
+});
 
 app.prepare().then(async () => { 
+  await initDatabase();
+
   const server = createServer((req, res) => {
     handle(req, res);
   });
@@ -42,6 +57,7 @@ app.prepare().then(async () => {
       origin: '*',
       methods: ['GET', 'POST'],
     },
+    transports: ['websocket'],
   });
 
   const users = new Map();
@@ -140,7 +156,11 @@ app.prepare().then(async () => {
       };
 
       messages.push(welcomeMessage);
-      await saveMessage(welcomeMessage);
+      try {
+        await saveMessage(welcomeMessage);
+      } catch (error) {
+        console.error('No se pudo guardar el mensaje de bienvenida:', error);
+      }
       io.emit('chat-message', welcomeMessage);
     });
 
@@ -157,7 +177,12 @@ app.prepare().then(async () => {
         messages.push(message);
         if (messages.length > 100) messages.shift();
 
-        await saveMessage(message);
+        try {
+          await saveMessage(message);
+        } catch (error) {
+          console.error('No se pudo guardar el mensaje:', error);
+        }
+
         io.emit('chat-message', message);
       }
     });
@@ -188,7 +213,12 @@ app.prepare().then(async () => {
         };
 
         messages.push(leaveMessage);
-        await saveMessage(leaveMessage);
+        try {
+          await saveMessage(leaveMessage);
+        } catch (error) {
+          console.error('No se pudo guardar el mensaje de salida:', error);
+        }
+
         io.emit('chat-message', leaveMessage);
       }
 
