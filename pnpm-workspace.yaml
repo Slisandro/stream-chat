@@ -1,3 +1,4 @@
 allowBuilds:
   sharp: true
+  sqlite3: set this to true or false
   unrs-resolver: true
