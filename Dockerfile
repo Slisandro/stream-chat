@@ -8,7 +8,7 @@ WORKDIR /app
 # Copiar archivos de dependencias
 COPY package*.json ./
 COPY server.js ./
-COPY next.config.js ./
+COPY next.config.ts ./
 
 # Instalar dependencias
 RUN npm install
