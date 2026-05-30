@@ -42,9 +42,14 @@ export default function Chat({ socket, currentUser }: ChatProps) {
             });
         };
 
+        const onClearChat = () => {
+            setMessages([]);
+        };
+
         socket.on('chat-history', onHistory);
         socket.on('chat-message', onMessage);
         socket.on('user-typing', onTyping);
+        socket.on('clear-chat', onClearChat);
 
         socket.emit('request-chat-history');
 
@@ -52,6 +57,7 @@ export default function Chat({ socket, currentUser }: ChatProps) {
             socket.off('chat-history', onHistory);
             socket.off('chat-message', onMessage);
             socket.off('user-typing', onTyping);
+            socket.off('clear-chat', onClearChat);
         };
     }, [socket]);
 

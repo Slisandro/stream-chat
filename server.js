@@ -45,7 +45,7 @@ const initDatabase = () => new Promise((resolve, reject) => {
   });
 });
 
-app.prepare().then(async () => { 
+app.prepare().then(async () => {
   await initDatabase();
 
   const server = createServer((req, res) => {
@@ -146,7 +146,7 @@ app.prepare().then(async () => {
       }
     });
 
-    socket.on('user-join', async (username) => { 
+    socket.on('user-join', async (username) => {
       const user = {
         id: socket.id,
         name: username,
@@ -179,10 +179,93 @@ app.prepare().then(async () => {
     socket.on('chat-message', async (data) => {
       const user = users.get(socket.id);
       if (user && data.text.trim()) {
+
+        // ========== NUEVO: DETECTAR COMANDOS ==========
+        const messageText = data.text.trim();
+
+        if (messageText.startsWith('/')) {
+          const [command, ...args] = messageText.slice(1).split(' ');
+          const argument = args.join(' ');
+
+          switch (command.toLowerCase()) {
+            case 'users':
+              // Listar usuarios conectados
+              const userList = Array.from(users.values()).map(u => u.name);
+              const userCount = userList.length;
+              socket.emit('chat-message', {
+                id: Date.now(),
+                user: { name: 'Sistema', color: '#d5baff', badges: ['verified_user'] },
+                text: `👥 Usuarios conectados (${userCount}): ${userList.join(', ')}`,
+                timestamp: new Date(),
+                system: true
+              });
+              break;
+
+            case 'clear':
+              // Limpiar chat del usuario (solo frontend)
+              socket.emit('clear-chat');
+              socket.emit('chat-message', {
+                id: Date.now(),
+                user: { name: 'Sistema', color: '#d5baff', badges: ['verified_user'] },
+                text: '🧹 Chat limpiado localmente',
+                timestamp: new Date(),
+                system: true
+              });
+              break;
+
+            case 'me':
+              // Acción en tercera persona
+              if (argument) {
+                io.emit('chat-message', {
+                  id: Date.now(),
+                  user: { name: user.name, color: user.color, badges: user.badges },
+                  text: `* ${user.name} ${argument}`,
+                  timestamp: new Date(),
+                  system: true
+                });
+              } else {
+                socket.emit('chat-message', {
+                  id: Date.now(),
+                  user: { name: 'Sistema', color: '#d5baff', badges: ['verified_user'] },
+                  text: '❌ Uso: /me [acción] - Ejemplo: /me está bailando',
+                  timestamp: new Date(),
+                  system: true
+                });
+              }
+              break;
+
+            case 'help':
+              socket.emit('chat-message', {
+                id: Date.now(),
+                user: { name: 'Sistema', color: '#d5baff', badges: ['verified_user'] },
+                text: `📖 Comandos disponibles:
+/users - Ver usuarios conectados
+/clear - Limpiar tu pantalla
+/me [acción] - Describir una acción
+/help - Mostrar esta ayuda`,
+                timestamp: new Date(),
+                system: true
+              });
+              break;
+
+            default:
+              socket.emit('chat-message', {
+                id: Date.now(),
+                user: { name: 'Sistema', color: '#d5baff', badges: ['verified_user'] },
+                text: `❌ Comando desconocido: ${command}. Escribe /help para ver comandos disponibles.`,
+                timestamp: new Date(),
+                system: true
+              });
+          }
+          return; // No guardar comandos en la base de datos
+        }
+        // ========== FIN DE COMANDOS ==========
+
+        // Mensaje normal (no comando)
         const message = {
           id: Date.now(),
           user,
-          text: data.text,
+          text: messageText,
           timestamp: new Date(),
         };
 
