@@ -5,8 +5,7 @@
   "scripts": {
     "dev": "node server.js",
     "build": "next build",
-    "start": "node server.js",
-    "postinstall": "next build"
+    "start": "node server.js"
   },
   "dependencies": {
     "next": "16.2.6",
