@@ -65,9 +65,13 @@ app.prepare().then(async () => {
   const loadMessages = () => {
     return new Promise((resolve, reject) => {
       db.all(`
-        SELECT * FROM messages 
-        ORDER BY timestamp ASC 
-        LIMIT 100
+        SELECT *
+        FROM (
+          SELECT * FROM messages
+          ORDER BY timestamp DESC
+          LIMIT 100
+        ) recent_messages
+        ORDER BY timestamp ASC
       `, (err, rows) => {
         if (err) {
           reject(err);
@@ -131,8 +135,16 @@ app.prepare().then(async () => {
   io.on('connection', (socket) => {
     console.log('Usuario conectado:', socket.id);
 
-    socket.emit('chat-history', messages);
     io.emit('users-list', Array.from(users.values()));
+
+    socket.on('request-chat-history', async () => {
+      try {
+        const latestMessages = await loadMessages();
+        socket.emit('chat-history', latestMessages);
+      } catch (error) {
+        console.error('No se pudo cargar el historial del chat:', error);
+      }
+    });
 
     socket.on('user-join', async (username) => { 
       const user = {

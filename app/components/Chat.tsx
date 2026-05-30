@@ -51,6 +51,8 @@ export default function Chat({ socket, currentUser }: ChatProps) {
             });
         });
 
+        socket.emit('request-chat-history');
+
         return () => {
             socket.off('chat-history');
             socket.off('chat-message');
