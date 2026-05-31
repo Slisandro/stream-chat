@@ -19,6 +19,15 @@ interface Message {
     system?: boolean;
 }
 
+interface PrivateMessage {
+    id: number;
+    from: string;
+    fromColor: string;
+    text: string;
+    timestamp: Date;
+    isPrivate: boolean;
+}
+
 interface ChatProps {
     socket: Socket;
     currentUser: string;
@@ -46,10 +55,26 @@ export default function Chat({ socket, currentUser }: ChatProps) {
             setMessages([]);
         };
 
+        const onPrivateMessage = (data: PrivateMessage) => {
+            const privateMsg: Message = {
+                id: data.id,
+                user: {
+                    name: `🔒 ${data.from} (privado)`,
+                    color: data.fromColor,
+                    badges: ['star']
+                },
+                text: `🤫 ${data.text}`,
+                timestamp: new Date(data.timestamp),
+                system: true
+            };
+            setMessages(prev => [...prev, privateMsg]);
+        };
+
         socket.on('chat-history', onHistory);
         socket.on('chat-message', onMessage);
         socket.on('user-typing', onTyping);
         socket.on('clear-chat', onClearChat);
+        socket.on('private-message', onPrivateMessage);
 
         socket.emit('request-chat-history');
 
@@ -58,6 +83,7 @@ export default function Chat({ socket, currentUser }: ChatProps) {
             socket.off('chat-message', onMessage);
             socket.off('user-typing', onTyping);
             socket.off('clear-chat', onClearChat);
+            socket.off('private-message', onPrivateMessage);
         };
     }, [socket]);
 
