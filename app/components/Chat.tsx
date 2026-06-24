@@ -110,32 +110,63 @@ export default function Chat({ socket, currentUser }: ChatProps) {
         }
     };
 
+    // Función para formatear el texto de "escribiendo"
+    const getTypingText = () => {
+        const users = Array.from(typingUsers);
+        if (users.length === 0) return '';
+        if (users.length === 1) return `${users[0]} está escribiendo...`;
+        if (users.length === 2) return `${users[0]} y ${users[1]} están escribiendo...`;
+        return `${users[0]} y ${users.length - 1} más están escribiendo...`;
+    };
+
     return (
-        <main className="flex-1 flex flex-col bg-surface-container-low">
-            <div className="h-12 border-b border-white/5 flex items-center justify-between px-4 flex-shrink-0 bg-surface-container">
-                <span className="text-label-bold font-label-bold uppercase tracking-widest text-on-surface-variant">
-                    Chat Grupal • {messages.length} mensajes
+        <main className="flex-1 flex flex-col bg-surface-container-low h-full">
+            {/* Header del chat - Responsive */}
+            <div className="h-12 sm:h-14 border-b border-white/5 flex items-center justify-between px-3 sm:px-4 flex-shrink-0 bg-surface-container">
+                <span className="text-body-xs sm:text-label-bold font-label-bold uppercase tracking-widest text-on-surface-variant truncate">
+                    Chat Grupal • {messages.length} {messages.length === 1 ? 'mensaje' : 'mensajes'}
                 </span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                     {typingUsers.size > 0 && (
-                        <span className="text-body-sm text-primary animate-pulse">
-                            {Array.from(typingUsers).join(', ')} está{typingUsers.size === 1 ? '' : 'n'} escribiendo...
+                        <span className="text-body-xs sm:text-body-sm text-primary animate-pulse truncate max-w-[120px] sm:max-w-[200px] md:max-w-none">
+                            {getTypingText()}
                         </span>
                     )}
                 </div>
             </div>
 
+            {/* Área de mensajes - Responsive con scroll */}
             <div
-                className="flex-1 overflow-y-auto p-2 flex flex-col gap-[2px] chat-scrollbar"
+                className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 flex flex-col gap-[2px] sm:gap-1 chat-scrollbar"
                 onScroll={handleScroll}
             >
-                {messages.map((msg, idx) => (
-                    <ChatMessage key={msg.id || idx} message={msg} currentUser={currentUser} />
-                ))}
+                {messages.length === 0 ? (
+                    <div className="flex-1 flex items-center justify-center">
+                        <div className="text-center text-on-surface-variant">
+                            <p className="text-body-lg sm:text-headline-sm mb-2">💬</p>
+                            <p className="text-body-sm sm:text-body-md">No hay mensajes aún</p>
+                            <p className="text-body-xs sm:text-body-sm opacity-60">¡Sé el primero en enviar un mensaje!</p>
+                        </div>
+                    </div>
+                ) : (
+                    messages.map((msg, idx) => (
+                        <ChatMessage 
+                            key={msg.id || idx} 
+                            message={msg} 
+                            currentUser={currentUser} 
+                        />
+                    ))
+                )}
                 <div ref={messagesEndRef} />
             </div>
 
-            <ChatInput onSendMessage={(text) => socket.emit('chat-message', { text })} onTyping={handleTyping} />
+            {/* Input del chat - Responsive */}
+            <div className="flex-shrink-0 p-2 sm:p-3 md:p-4 border-t border-white/5 bg-surface-container">
+                <ChatInput 
+                    onSendMessage={(text) => socket.emit('chat-message', { text })} 
+                    onTyping={handleTyping} 
+                />
+            </div>
         </main>
     );
 }
